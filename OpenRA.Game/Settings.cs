@@ -235,6 +235,46 @@ namespace OpenRA
 		public bool SyncCheckBotModuleCode = false;
 	}
 
+	[YamlNode("Challenge", shared: true)]
+	public class ChallengeSettings : SettingsModule
+	{
+		[Desc("Enable challenge mode integration.")]
+		public bool Enabled = false;
+
+		[Desc("Match identifier forwarded to the external challenge agent.")]
+		public string MatchId = "";
+
+		[Desc("External agent endpoint. Supported format: tcp:127.0.0.1:PORT.")]
+		public string AgentGatewayEndpoint = "tcp:127.0.0.1:50051";
+
+		[Desc("Second external agent endpoint for dual-port mode. Supported format: tcp:127.0.0.1:PORT.")]
+		public string AgentGatewayEndpoint2 = "tcp:127.0.0.1:50052";
+
+		[Desc("Enable dual-port mode for multiple bot connections.")]
+		public bool DualPortMode = false;
+
+		[Desc("Interval in ticks between decision observations.")]
+		public int DecisionIntervalTicks = 5;
+
+		[Desc("Maximum response age in ticks before discarding an agent response.")]
+		public int ResponseDeadlineTicks = 20;
+
+		[Desc("Maximum actions accepted from the agent per decision.")]
+		public int MaxActionsPerDecision = 8;
+
+		[Desc("If true, agent observations should obey strict fog-of-war visibility.")]
+		public bool StrictFogOfWar = true;
+
+		[Desc("If true, persist a full action audit log for challenge matches.")]
+		public bool SaveActionAudit = false;
+
+		[Desc("If true, persist serialized observations for challenge matches.")]
+		public bool SaveObservations = false;
+
+		[Desc("Optional deterministic seed override for challenge integration.")]
+		public int Seed = 0;
+	}
+
 	[YamlNode("Graphics", shared: true)]
 	public class GraphicSettings : SettingsModule
 	{
@@ -391,6 +431,7 @@ namespace OpenRA
 		public readonly GraphicSettings Graphics;
 		public readonly ServerSettings Server;
 		public readonly DebugSettings Debug;
+		public readonly ChallengeSettings Challenge;
 
 		readonly Arguments args;
 		readonly TypeDictionary modules = [];
@@ -415,6 +456,7 @@ namespace OpenRA
 			Graphics = GetOrCreate<GraphicSettings>(null);
 			Server = GetOrCreate<ServerSettings>(null);
 			Debug = GetOrCreate<DebugSettings>(null);
+			Challenge = GetOrCreate<ChallengeSettings>(null);
 		}
 
 		public T GetOrCreate<T>(ObjectCreator objectCreator, string mod = null) where T : SettingsModule

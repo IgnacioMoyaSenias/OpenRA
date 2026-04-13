@@ -2,8 +2,8 @@
 
 @echo on
 
-set Name="Dedicated Server"
-set Mod=ra
+set Name="Challenge Dedicated Server"
+set Mod=challenge-ra
 set Map=""
 set ListenPort=1234
 set AdvertiseOnline=False
@@ -27,6 +27,16 @@ set SupportDir=""
 
 set AllowBotOnlyGames=True
 
+REM Challenge-specific settings
+set Challenge.Enabled=True
+if "%~1"=="" (
+    echo No MatchId provided, using auto-generated ID
+    set Challenge.MatchId=
+) else (
+    echo Using MatchId: %~1
+    set Challenge.MatchId=%~1
+)
+
 :loop
 
 bin\OpenRA.Server.exe Engine.EngineDir=".." Game.Mod=%Mod% ^
@@ -43,6 +53,8 @@ bin\OpenRA.Server.exe Engine.EngineDir=".." Game.Mod=%Mod% ^
   Server.EnableLintChecks=%EnableLintChecks% ^
   Server.ShareAnonymizedIPs=%ShareAnonymizedIPs% ^
   Server.FloodLimitJoinCooldown=%FloodLimitJoinCooldown% ^
-  Engine.SupportDir=%SupportDir%
+  Engine.SupportDir=%SupportDir% ^
+  Challenge.Enabled=%ChallengeEnabled% ^
+  Challenge.MatchId=%ChallengeMatchId%
 
 goto loop

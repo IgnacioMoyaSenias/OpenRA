@@ -10,28 +10,38 @@ set -o errexit || exit $?
 
 ENGINEDIR=$(dirname "$0")
 
-Name="${Name:-"Dedicated Server"}"
-Mod="${Mod:-"ra"}"
+Name="${Name:-"Challenge Dedicated Server"}"
+Mod="${Mod:-"challenge-ra"}"
 Map="${Map:-""}"
 ListenPort="${ListenPort:-"1234"}"
-AdvertiseOnline="${AdvertiseOnline:-"True"}"
+AdvertiseOnline="${AdvertiseOnline:-"False"}"
 AdvertiseOnLocalNetwork="${AdvertiseOnLocalNetwork:-"True"}"
 Password="${Password:-""}"
-RecordReplays="${RecordReplays:-"False"}"
+RecordReplays="${RecordReplays:-"True"}"
 
 RequireAuthentication="${RequireAuthentication:-"False"}"
 ProfileIDBlacklist="${ProfileIDBlacklist:-""}"
 ProfileIDWhitelist="${ProfileIDWhitelist:-""}"
 
-EnableSingleplayer="${EnableSingleplayer:-"False"}"
+EnableSingleplayer="${EnableSingleplayer:-"True"}"
 EnableSyncReports="${EnableSyncReports:-"False"}"
-EnableGeoIP="${EnableGeoIP:-"True"}"
+EnableGeoIP="${EnableGeoIP:-"False"}"
 EnableLintChecks="${EnableLintChecks:-"True"}"
 ShareAnonymizedIPs="${ShareAnonymizedIPs:-"True"}"
 
 FloodLimitJoinCooldown="${FloodLimitJoinCooldown:-"5000"}"
 
 SupportDir="${SupportDir:-""}"
+
+# Challenge-specific settings
+ChallengeEnabled="${ChallengeEnabled:-"True"}"
+if [ -z "$1" ]; then
+    echo "No MatchId provided, using auto-generated ID"
+    ChallengeMatchId=""
+else
+    echo "Using MatchId: $1"
+    ChallengeMatchId="$1"
+fi
 
 while true; do
      dotnet "${ENGINEDIR}/bin/OpenRA.Server.dll" Engine.EngineDir=".." Game.Mod="$Mod" \
@@ -51,5 +61,7 @@ while true; do
      Server.EnableLintChecks="$EnableLintChecks" \
      Server.ShareAnonymizedIPs="$ShareAnonymizedIPs" \
      Server.FloodLimitJoinCooldown="$FloodLimitJoinCooldown" \
-     Engine.SupportDir="$SupportDir" || :
+     Engine.SupportDir="$SupportDir" \
+     Challenge.Enabled="$ChallengeEnabled" \
+     Challenge.MatchId="$ChallengeMatchId" || :
 done

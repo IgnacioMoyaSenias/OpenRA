@@ -1,0 +1,11 @@
+Player:
+	ModularBot@ChallengeExternalBot:
+		Type: challenge-external
+		Name: bot-challenge-external.name
+
+	GrantConditionOnBotOwner@challenge-external:
+		Condition: enable-challenge-external
+		Bots: challenge-external
+
+	ExternalAgentBotModule@challenge-external:
+		RequiresCondition: enable-challenge-external

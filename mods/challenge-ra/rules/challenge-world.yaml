@@ -1,0 +1,13 @@
+# Challenge world rules
+World:
+	ChallengeResultReporter@challenge-world:
+		ResultsDirectory: challenge-results
+		SaveMetrics: true
+		SaveReplay: true
+		MetricsInterval: 100
+
+	AutoStartGame@challenge-autostart:
+		Enabled: true
+		StartDelay: 5
+		BotCount: 2
+		Map: ""

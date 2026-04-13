@@ -46,6 +46,12 @@ namespace OpenRA.Mods.Common.Server
 		[FluentReference]
 		const string InsufficientEnabledSpawnPoints = "notification-insufficient-enabled-spawn-points";
 
+		[FluentReference]
+		const string ChallengePortUnavailable = "notification-challenge-port-unavailable";
+
+		[FluentReference]
+		const string ChallengePortInsufficient = "notification-challenge-port-insufficient";
+
 		[FluentReference("command")]
 		const string MalformedCommand = "notification-malformed-command";
 
@@ -285,6 +291,10 @@ namespace OpenRA.Mods.Common.Server
 				if (LobbyUtils.InsufficientEnabledSpawnPoints(server.Map, server.LobbyInfo))
 					return;
 
+				// Validate challenge mode port availability
+				if (!ValidateChallengePorts(server))
+					return;
+
 				server.StartGame();
 			}
 		}
@@ -343,6 +353,16 @@ namespace OpenRA.Mods.Common.Server
 					server.SendFluentMessageTo(conn, InsufficientEnabledSpawnPoints);
 					return true;
 				}
+
+				// Validate challenge mode port availability
+				Console.WriteLine("[CHALLENGE DEBUG] About to validate challenge ports");
+				if (!ValidateChallengePorts(server))
+				{
+					Console.WriteLine("[CHALLENGE DEBUG] Port validation failed - sending error message");
+					server.SendFluentMessageTo(conn, ChallengePortUnavailable);
+					return true;
+				}
+				Console.WriteLine("[CHALLENGE DEBUG] Port validation passed");
 
 				server.StartGame();
 
@@ -1458,6 +1478,105 @@ namespace OpenRA.Mods.Common.Server
 				return server.LobbyInfo.NonBotPlayers.Any();
 
 			return server.LobbyInfo.NonBotPlayers.Count() >= 2;
+		}
+
+		static bool ValidateChallengePorts(S server)
+		{
+			// Only validate if challenge mode is enabled
+			if (!Game.Settings.Challenge.Enabled)
+				return true;
+
+			var requiredPorts = new List<int>();
+
+			// Log all clients for debugging
+			Log.Write("server", "Challenge validation: All clients in lobby:");
+			foreach (var client in server.LobbyInfo.Clients)
+			{
+				Log.Write("server", $"  - {client.Name}: Bot={client.Bot}");
+			}
+
+			var botCount = server.LobbyInfo.Clients.Count(c => c.Bot != null && (c.Bot == "challenge-external" || c.Bot.Contains("ExternalAgent") || c.Bot.Contains("external") || c.Bot.Contains("challenge")));
+
+			Log.Write("server", $"Challenge validation: Found {botCount} challenge bots");
+			Log.Write("server", $"Challenge validation: DualPortMode={Game.Settings.Challenge.DualPortMode}");
+
+			// Also write to console for immediate visibility
+			Console.WriteLine($"[CHALLENGE DEBUG] Found {botCount} challenge bots, DualPortMode={Game.Settings.Challenge.DualPortMode}");
+
+			if (Game.Settings.Challenge.DualPortMode)
+			{
+				// In dual port mode, we need both ports available for each bot
+				try
+				{
+					var endpoint1 = Game.Settings.Challenge.AgentGatewayEndpoint;
+					var endpoint2 = Game.Settings.Challenge.AgentGatewayEndpoint2;
+					var port1 = ParsePortFromEndpoint(endpoint1);
+					var port2 = ParsePortFromEndpoint(endpoint2);
+					requiredPorts.Add(port1);
+					requiredPorts.Add(port2);
+				}
+				catch
+				{
+					return false;
+				}
+			}
+			else
+			{
+				// Single port mode
+				try
+				{
+					var endpoint = Game.Settings.Challenge.AgentGatewayEndpoint;
+					var port = ParsePortFromEndpoint(endpoint);
+					requiredPorts.Add(port);
+				}
+				catch
+				{
+					return false;
+				}
+			}
+
+			// Check if ports are available
+			foreach (var port in requiredPorts)
+			{
+				Log.Write("server", $"Challenge validation: Checking port {port}");
+				if (!IsPortAvailable(port))
+				{
+					Log.Write("server", $"Challenge mode port {port} is not available");
+					return false;
+				}
+				Log.Write("server", $"Challenge validation: Port {port} is available");
+			}
+
+			return true;
+		}
+
+		static int ParsePortFromEndpoint(string endpoint)
+		{
+			if (string.IsNullOrWhiteSpace(endpoint) || !endpoint.StartsWith("tcp:127.0.0.1:", StringComparison.Ordinal))
+				throw new ArgumentException("Invalid endpoint format");
+
+			var portText = endpoint["tcp:127.0.0.1:".Length..];
+			if (!int.TryParse(portText, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var port) || port is <= 0 or > 65535)
+				throw new ArgumentException($"Invalid port in endpoint '{endpoint}'.");
+
+			return port;
+		}
+
+		static bool IsPortAvailable(int port)
+		{
+			try
+			{
+				using var socket = new System.Net.Sockets.TcpClient();
+				// Try to connect with a very short timeout
+				socket.Connect("127.0.0.1", port);
+				// If we can connect, the gateway is listening
+				socket.Close();
+				return true; // Port is available for gateway connection
+			}
+			catch
+			{
+				return false; // Port is not available (no gateway listening)
+			}
 		}
 	}
 }
